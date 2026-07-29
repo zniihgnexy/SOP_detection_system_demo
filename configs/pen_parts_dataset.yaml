@@ -16,7 +16,14 @@
 # YOLO 标注格式：每行一个目标 "类别序号 中心x 中心y 宽 高"，后四个数都是
 # 相对图像尺寸的 0~1 小数。类别序号就是下面 names 里的下标。
 
-path: ../data/pen_parts     # 相对本文件所在目录
+# ⚠ path 必须写**绝对路径**。
+# Ultralytics 解析相对路径时是相对它自己的 datasets_dir（默认 ~/datasets），
+# 不是相对本文件，写相对路径会报 "Dataset not found"。
+#
+# 在仓库根目录执行下面这行，把输出粘到 path: 后面：
+#     python -c "import pathlib; print(pathlib.Path('data/pen_parts').resolve())"
+#
+path: /把这里改成上面命令输出的绝对路径/data/pen_parts
 train: images/train
 val: images/val
 test: images/test
