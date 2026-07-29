@@ -1,0 +1,22 @@
+# 装笔顺序 SOP 智能检测系统 —— 依赖清单
+#
+# 【重要】Python 版本必须是 3.10 / 3.11 / 3.12。
+# MediaPipe 目前没有 3.13 和 3.14 的安装包，用这两个版本会在装依赖时失败。
+# 查看本机版本：python3 --version
+#
+# 注意：run.py --replay 和 --selfcheck 的判定层部分只用标准库，
+# 即使下面的依赖没装齐也能跑，可用于分步排查环境问题。
+
+# --- 视觉感知 ---
+ultralytics>=8.0.0          # YOLOv8n 零件检测（训练 + 推理）
+mediapipe>=0.10.0           # 手部 21 关键点提取
+opencv-python>=4.8.0        # 视频读写、图像预处理
+
+# --- 模型训练与推理 ---
+torch>=2.0.0                # Bi-LSTM 动作识别
+numpy>=1.24.0
+onnx>=1.14.0                # 模型导出（scripts/train_action.py 末尾）
+
+# --- Web 界面 ---
+fastapi>=0.100.0
+uvicorn[standard]>=0.23.0

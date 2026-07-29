@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# Claude Code 本地配置（含本机权限设置，勿提交）
+.claude/
+
+# 模型权重与数据集（体积大，各自本地准备）
+models/
+data/
+runs/
+*.pt
+*.onnx
+*.engine
+
+# 运行产物
+*.db
+snapshots/
+
+# 系统
+.DS_Store

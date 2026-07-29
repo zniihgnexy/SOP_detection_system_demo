@@ -1,0 +1,72 @@
+{
+  "_readme": "SOP 模板。每个字段的含义见 docs/user-manual-zh.md 第 7 章。换笔型时复制本文件改名即可。",
+
+  "model_name": "GelPen_0.5mm",
+  "version": "v1.0",
+
+  "initial_parts": ["barrel", "spring", "refill", "tip", "cap"],
+  "final_parts": ["finished_pen"],
+
+  "steps": [
+    {
+      "id": "S1",
+      "name": "取笔杆",
+      "expected_action": "Pick",
+      "target_part": "barrel",
+      "parent_part": null,
+      "timeout_ms": 3000,
+      "required_parts_present": ["barrel"],
+      "optional": false
+    },
+    {
+      "id": "S2",
+      "name": "装弹簧",
+      "expected_action": "Insert",
+      "target_part": "spring",
+      "parent_part": "barrel",
+      "timeout_ms": 5000,
+      "required_parts_present": ["spring", "barrel"],
+      "optional": false
+    },
+    {
+      "id": "S3",
+      "name": "装笔芯",
+      "expected_action": "Insert",
+      "target_part": "refill",
+      "parent_part": "barrel",
+      "timeout_ms": 5000,
+      "required_parts_present": ["refill", "barrel"],
+      "optional": false
+    },
+    {
+      "id": "S4",
+      "name": "装笔尖",
+      "expected_action": "Screw",
+      "target_part": "tip",
+      "parent_part": "barrel",
+      "timeout_ms": 6000,
+      "required_parts_present": ["tip", "barrel"],
+      "optional": false
+    },
+    {
+      "id": "S5",
+      "name": "装笔帽",
+      "expected_action": "Press",
+      "target_part": "cap",
+      "parent_part": "barrel",
+      "timeout_ms": 4000,
+      "required_parts_present": ["cap", "barrel"],
+      "optional": false
+    },
+    {
+      "id": "S6",
+      "name": "放置成品",
+      "expected_action": "Place",
+      "target_part": "finished_pen",
+      "parent_part": null,
+      "timeout_ms": 3000,
+      "required_parts_present": [],
+      "optional": false
+    }
+  ]
+}

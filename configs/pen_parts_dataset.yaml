@@ -1,0 +1,31 @@
+# YOLOv8n 零件检测数据集定义（设计文档 §7 Phase 1 标注类别 / Phase 2.1 训练）
+#
+# 用法见 docs/user-manual-zh.md 第 5 章。
+# path 下面的目录结构必须是：
+#
+#   data/pen_parts/
+#   ├── images/
+#   │   ├── train/    xxx.jpg
+#   │   ├── val/
+#   │   └── test/
+#   └── labels/
+#       ├── train/    xxx.txt   （与 images 同名，YOLO 格式）
+#       ├── val/
+#       └── test/
+#
+# YOLO 标注格式：每行一个目标 "类别序号 中心x 中心y 宽 高"，后四个数都是
+# 相对图像尺寸的 0~1 小数。类别序号就是下面 names 里的下标。
+
+path: ../data/pen_parts     # 相对本文件所在目录
+train: images/train
+val: images/val
+test: images/test
+
+# 6 类零件，顺序即类别序号，改动这里必须同步 sop/fsm.py 的 PARTS
+names:
+  0: barrel     # 笔杆
+  1: cap        # 笔帽
+  2: spring     # 弹簧
+  3: refill     # 笔芯（墨水管）
+  4: tip        # 笔尖锥套
+  5: grip       # 握胶

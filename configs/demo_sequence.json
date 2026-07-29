@@ -1,0 +1,78 @@
+{
+  "_readme": "手写动作序列，用来在没有任何模型权重和训练数据的情况下验证 SOP 判定层。跑法：python run.py --replay configs/demo_sequence.json",
+
+  "station_id": "ST01",
+  "template": "configs/gelpen_0.5.json",
+
+  "sequences": [
+    {
+      "name": "正常装配",
+      "expect": "PASS",
+      "description": "六个步骤按 SOP 顺序完成，中间的拿取和对准动作不推进状态机。",
+      "events": [
+        {"t": 0,    "action": "Idle",   "confidence": 0.99},
+        {"t": 400,  "action": "Pick",   "target_part": "barrel", "confidence": 0.95},
+        {"t": 1100, "action": "Pick",   "target_part": "spring", "confidence": 0.92},
+        {"t": 1600, "action": "Align",  "target_part": "spring", "confidence": 0.87},
+        {"t": 2200, "action": "Insert", "target_part": "spring", "confidence": 0.94},
+        {"t": 3000, "action": "Pick",   "target_part": "refill", "confidence": 0.91},
+        {"t": 3800, "action": "Insert", "target_part": "refill", "confidence": 0.93},
+        {"t": 4600, "action": "Pick",   "target_part": "tip",    "confidence": 0.90},
+        {"t": 5500, "action": "Screw",  "target_part": "tip",    "confidence": 0.89},
+        {"t": 6300, "action": "Pick",   "target_part": "cap",    "confidence": 0.94},
+        {"t": 6900, "action": "Press",  "target_part": "cap",    "confidence": 0.96},
+        {"t": 7600, "action": "Place",  "target_part": "finished_pen", "confidence": 0.97}
+      ]
+    },
+    {
+      "name": "漏装弹簧",
+      "expect": "FAIL / MISSING_STEP",
+      "description": "跳过 S2 装弹簧直接装笔芯。判定引擎在装笔芯那一刻就能发现 S2 被跨过。",
+      "events": [
+        {"t": 0,    "action": "Idle",   "confidence": 0.99},
+        {"t": 400,  "action": "Pick",   "target_part": "barrel", "confidence": 0.95},
+        {"t": 1200, "action": "Pick",   "target_part": "refill", "confidence": 0.91},
+        {"t": 2000, "action": "Align",  "target_part": "refill", "confidence": 0.88},
+        {"t": 2600, "action": "Insert", "target_part": "refill", "confidence": 0.94},
+        {"t": 3400, "action": "Pick",   "target_part": "tip",    "confidence": 0.93},
+        {"t": 4200, "action": "Screw",  "target_part": "tip",    "confidence": 0.90},
+        {"t": 5000, "action": "Pick",   "target_part": "cap",    "confidence": 0.92},
+        {"t": 5600, "action": "Press",  "target_part": "cap",    "confidence": 0.95},
+        {"t": 6400, "action": "Place",  "target_part": "finished_pen", "confidence": 0.97}
+      ]
+    },
+    {
+      "name": "错序：先装笔尖后装笔芯",
+      "expect": "FAIL / MISSING_STEP + WRONG_ORDER",
+      "description": "笔芯和笔尖的顺序颠倒。在线判定在装笔尖那一刻只能判为漏装笔芯，等笔芯补装上来才能确认是错序，所以会报两条异常 —— 这是在线检测的固有特性，不是 bug。",
+      "events": [
+        {"t": 0,    "action": "Idle",   "confidence": 0.99},
+        {"t": 400,  "action": "Pick",   "target_part": "barrel", "confidence": 0.95},
+        {"t": 1100, "action": "Pick",   "target_part": "spring", "confidence": 0.92},
+        {"t": 1900, "action": "Insert", "target_part": "spring", "confidence": 0.94},
+        {"t": 2700, "action": "Pick",   "target_part": "tip",    "confidence": 0.90},
+        {"t": 3600, "action": "Screw",  "target_part": "tip",    "confidence": 0.91},
+        {"t": 4400, "action": "Pick",   "target_part": "refill", "confidence": 0.89},
+        {"t": 5100, "action": "Insert", "target_part": "refill", "confidence": 0.93},
+        {"t": 5900, "action": "Pick",   "target_part": "cap",    "confidence": 0.94},
+        {"t": 6500, "action": "Press",  "target_part": "cap",    "confidence": 0.96},
+        {"t": 7200, "action": "Place",  "target_part": "finished_pen", "confidence": 0.97}
+      ]
+    },
+    {
+      "name": "装配超时",
+      "expect": "FAIL / TIMEOUT",
+      "description": "装弹簧这一步停了 9 秒，超过模板里 S2 的 5000ms 限时。",
+      "events": [
+        {"t": 0,     "action": "Idle",   "confidence": 0.99},
+        {"t": 400,   "action": "Pick",   "target_part": "barrel", "confidence": 0.95},
+        {"t": 1200,  "action": "Pick",   "target_part": "spring", "confidence": 0.92},
+        {"t": 9500,  "action": "Insert", "target_part": "spring", "confidence": 0.94},
+        {"t": 10300, "action": "Insert", "target_part": "refill", "confidence": 0.93},
+        {"t": 11100, "action": "Screw",  "target_part": "tip",    "confidence": 0.90},
+        {"t": 11900, "action": "Press",  "target_part": "cap",    "confidence": 0.95},
+        {"t": 12600, "action": "Place",  "target_part": "finished_pen", "confidence": 0.97}
+      ]
+    }
+  ]
+}
