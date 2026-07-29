@@ -274,6 +274,23 @@ def step(
     return state, events + ev
 
 
+def format_event(event: dict, timestamp_ms: int | None = None) -> str | None:
+    """把事件格式化成一行终端输出。返回 None 表示这个事件不单独打印。
+
+    放在 fsm 里是因为回放（run.py，只用标准库）和实时检测（pipeline.py，需要
+    torch/cv2）都要打印同样的东西，抽到这里可以避免两份格式代码走样。
+    """
+    stamp = "" if timestamp_ms is None else f"{timestamp_ms / 1000:>6.1f}s  "
+    kind = event["type"]
+
+    if kind == "step_completed":
+        return (f"    ✓ {stamp}{event['step_id']} {event['step_name']:<6}"
+                f"  耗时 {event['duration_ms']:>5}ms  置信度 {event['confidence']}")
+    if kind == "anomaly_detected":
+        return f"    ✗ {stamp}{event['anomaly_type']:<13} {event['message']}"
+    return None
+
+
 def finalize(
     template: SOPTemplate, state: MatchState, timestamp_ms: int
 ) -> tuple[MatchState, list[dict]]:

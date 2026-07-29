@@ -47,7 +47,8 @@ class Perception:
         import mediapipe as mp
 
         self._mp_hands = mp.solutions.hands
-        self._connections = self._mp_hands.HAND_CONNECTIONS
+        #: 21 点之间的骨架连线，draw_overlay 需要
+        self.connections = self._mp_hands.HAND_CONNECTIONS
         # 参数照抄 §4.2.3 的提取配置
         self._hands = self._mp_hands.Hands(
             static_image_mode=False,

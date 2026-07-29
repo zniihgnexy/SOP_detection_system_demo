@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>装笔顺序 SOP 智能检测</title>
+<style>
+  :root {
+    --bg:        oklch(16% 0.015 250);
+    --surface:   oklch(21% 0.018 250);
+    --surface-2: oklch(26% 0.02 250);
+    --line:      oklch(32% 0.02 250);
+    --text:      oklch(94% 0.005 250);
+    --muted:     oklch(63% 0.015 250);
+
+    --ok:      #00C853;   /* 与叠加层同色，见 design.md 8.3.2 */
+    --active:  #2979FF;
+    --alarm:   #FF1744;
+    --hand:    #00BCD4;
+    --wait:    oklch(48% 0.02 250);
+
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --step: clamp(1.6rem, 1rem + 2.2vw, 2.6rem);
+    --label: 0.68rem;
+    --gap: clamp(0.75rem, 0.5rem + 0.8vw, 1.25rem);
+    --radius: 10px;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.5 system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .label {
+    font-size: var(--label);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 600;
+  }
+
+  .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+  /* ---------- 顶栏 ---------- */
+  header {
+    display: flex; align-items: baseline; gap: var(--gap);
+    flex-wrap: wrap;
+    padding: calc(var(--gap) * 0.9) var(--gap);
+    border-bottom: 1px solid var(--line);
+    background: var(--surface);
+  }
+  header h1 { margin: 0; font-size: 1.05rem; font-weight: 650; letter-spacing: 0.01em; }
+  header .spacer { margin-left: auto; }
+
+  .pill {
+    display: inline-flex; align-items: center; gap: 0.45em;
+    padding: 0.25em 0.7em;
+    border: 1px solid var(--line); border-radius: 999px;
+    font-size: 0.78rem; color: var(--muted);
+  }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--wait); }
+  .dot[data-on="running"] { background: var(--ok); box-shadow: 0 0 0 3px color-mix(in oklch, var(--ok) 25%, transparent); }
+  .dot[data-on="idle"]    { background: var(--hand); }
+  .dot[data-on="error"]   { background: var(--alarm); animation: blink 1s steps(2) infinite; }
+  @keyframes blink { 50% { opacity: 0.25; } }
+
+  /* ---------- 主栅格 ---------- */
+  main {
+    display: grid;
+    grid-template-columns: minmax(0, 1.65fr) minmax(300px, 1fr);
+    gap: var(--gap);
+    padding: var(--gap);
+    align-items: start;
+  }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .card > h2 {
+    margin: 0; padding: 0.7rem var(--gap) 0.5rem;
+    font-size: var(--label); letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--muted); font-weight: 600;
+  }
+  .card > .body { padding: 0 var(--gap) var(--gap); }
+
+  #video {
+    display: block; width: 100%; height: auto;
+    background: #000; aspect-ratio: 960 / 544;
+    object-fit: contain;
+  }
+
+  /* ---------- 当前步骤 ---------- */
+  .now { padding: var(--gap); border-bottom: 1px solid var(--line); }
+  .now .step {
+    font-size: var(--step); font-weight: 680; line-height: 1.1;
+    letter-spacing: -0.01em; margin: 0.15em 0 0.4em;
+  }
+  .now .step small { font-family: var(--mono); font-size: 0.42em; color: var(--muted); font-weight: 500; }
+
+  .kv { display: grid; grid-template-columns: auto 1fr; gap: 0.3em 0.9em; font-size: 0.86rem; }
+  .kv dt { color: var(--muted); }
+  .kv dd { margin: 0; font-family: var(--mono); }
+
+  .timer { margin-top: 0.9em; }
+  .timer .track { height: 4px; background: var(--surface-2); border-radius: 2px; overflow: hidden; }
+  .timer .fill {
+    height: 100%; width: 0%; background: var(--active);
+    transition: width 180ms linear, background 180ms;
+  }
+  .timer[data-over="1"] .fill { background: var(--alarm); }
+
+  /* ---------- 步骤条 ---------- */
+  .steps { display: flex; gap: 3px; margin-bottom: 0.7em; }
+  .steps li {
+    flex: 1; list-style: none; text-align: center;
+    padding: 0.45em 0.2em; font-size: 0.72rem;
+    background: var(--surface-2); color: var(--muted);
+    border-top: 2px solid var(--wait);
+  }
+  .steps li:first-child { border-radius: 4px 0 0 4px; }
+  .steps li:last-child  { border-radius: 0 4px 4px 0; }
+  .steps li[data-s="done"]    { border-top-color: var(--ok);     color: var(--text); }
+  .steps li[data-s="active"]  { border-top-color: var(--active); color: #fff;
+                                background: color-mix(in oklch, var(--active) 22%, var(--surface-2)); }
+  .steps li[data-s="skipped"] { border-top-color: var(--alarm);  color: var(--alarm); }
+
+  /* ---------- 零件 ---------- */
+  .parts { display: flex; flex-direction: column; gap: 0.3em; }
+  .parts div { display: flex; align-items: center; gap: 0.55em; font-size: 0.85rem; }
+  .parts .tag {
+    margin-left: auto; font-size: 0.7rem; padding: 0.1em 0.5em;
+    border-radius: 3px; background: var(--surface-2); color: var(--muted);
+  }
+  .parts .chip { width: 8px; height: 8px; border-radius: 2px; background: var(--wait); }
+  .parts [data-p="assembled"] .chip { background: var(--ok); }
+  .parts [data-p="operating"] .chip { background: var(--active); }
+  .parts [data-p="in_hand"]   .chip { background: var(--hand); }
+
+  /* ---------- 异常 ---------- */
+  #alarms:empty::after {
+    content: "暂无异常"; color: var(--muted); font-size: 0.85rem;
+  }
+  #alarms div {
+    border-left: 3px solid var(--alarm);
+    background: color-mix(in oklch, var(--alarm) 9%, transparent);
+    padding: 0.45em 0.7em; margin-bottom: 0.35em;
+    font-size: 0.84rem; border-radius: 0 4px 4px 0;
+  }
+  #alarms .t { font-family: var(--mono); font-size: 0.72rem; color: var(--alarm); }
+
+  /* ---------- 底部 ---------- */
+  footer { padding: 0 var(--gap) var(--gap); }
+  .stats { display: flex; gap: var(--gap); flex-wrap: wrap; margin-bottom: var(--gap); }
+  .stat { flex: 1 1 130px; padding: var(--gap); }
+  .stat .v { font-family: var(--mono); font-size: clamp(1.5rem, 1rem + 1.6vw, 2.1rem); font-weight: 650; }
+  .stat[data-tone="ok"]    .v { color: var(--ok); }
+  .stat[data-tone="alarm"] .v { color: var(--alarm); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+  th, td { padding: 0.5em 0.6em; text-align: left; border-bottom: 1px solid var(--line); }
+  th { font-size: var(--label); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+  td.num { font-family: var(--mono); }
+  tr[data-r="FAIL"] td:first-child { box-shadow: inset 2px 0 var(--alarm); }
+  .verdict[data-r="PASS"] { color: var(--ok); }
+  .verdict[data-r="FAIL"] { color: var(--alarm); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>装笔顺序 SOP 智能检测</h1>
+  <span class="pill"><span class="dot" id="lamp"></span><span id="status">连接中</span></span>
+  <span class="pill" id="model">—</span>
+  <span class="spacer"></span>
+  <span class="pill num" id="clock">—</span>
+</header>
+
+<main>
+  <section class="card" aria-label="实时视频">
+    <img id="video" alt="实时视频与检测叠加层">
+  </section>
+
+  <section class="card" aria-label="当前状态">
+    <div class="now">
+      <p class="label">当前步骤 · 第 <span id="idx" class="num">1</span> 支</p>
+      <p class="step" id="stepName">等待数据 <small id="stepId"></small></p>
+      <dl class="kv">
+        <dt>期望动作</dt><dd id="expected">—</dd>
+        <dt>检测动作</dt><dd id="detected">—</dd>
+        <dt>操作零件</dt><dd id="targetPart">—</dd>
+      </dl>
+      <div class="timer" id="timer">
+        <div class="track"><div class="fill" id="timerFill"></div></div>
+        <dl class="kv" style="margin-top:0.4em">
+          <dt>已耗时</dt><dd><span id="elapsed">0.0</span>s / <span id="limit">—</span>s</dd>
+        </dl>
+      </div>
+    </div>
+
+    <h2>SOP 进度</h2>
+    <div class="body">
+      <ol class="steps" id="steps"></ol>
+      <h2 style="padding-left:0">零件状态</h2>
+      <div class="parts" id="parts"></div>
+    </div>
+
+    <h2>异常</h2>
+    <div class="body" id="alarms"></div>
+  </section>
+</main>
+
+<footer>
+  <div class="stats">
+    <div class="card stat"><p class="label">累计装配</p><p class="v" id="total">0</p></div>
+    <div class="card stat" data-tone="ok"><p class="label">合格</p><p class="v" id="passed">0</p></div>
+    <div class="card stat" data-tone="alarm"><p class="label">异常</p><p class="v" id="failed">0</p></div>
+    <div class="card stat"><p class="label">合格率</p><p class="v" id="rate">—</p></div>
+  </div>
+
+  <div class="card">
+    <h2>检测记录</h2>
+    <div class="body" style="overflow-x:auto">
+      <table>
+        <thead><tr><th>#</th><th>时间</th><th>结果</th><th>异常</th><th>完成步骤</th><th>耗时</th></tr></thead>
+        <tbody id="records"><tr><td colspan="6" style="color:var(--muted)">暂无记录</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</footer>
+
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+
+const PART_LABEL = { barrel:"笔杆", cap:"笔帽", spring:"弹簧", refill:"笔芯", tip:"笔尖", grip:"握胶" };
+const STATUS_LABEL = { waiting:"待装配", operating:"正在操作", assembled:"已装配", in_hand:"已在手" };
+
+let videoStarted = false;
+let totalSteps = 0;        // 从 SOP 模板读，不写死步骤数
+
+function renderSnapshot(s) {
+  $("lamp").dataset.on = s.status;
+  $("status").textContent = s.status === "running" ? "运行中" : "空闲";
+  $("model").textContent = `${s.model_name} ${s.model_version} · ${s.station_id}`;
+  $("clock").textContent = (s.timestamp || "").replace("T", " ").slice(0, 19);
+  $("idx").textContent = s.assembly_index;
+
+  $("stepName").firstChild.nodeValue = s.current_step_name + " ";
+  $("stepId").textContent = s.current_step || "";
+  $("expected").textContent = s.expected_action || "—";
+  $("detected").textContent = `${s.current_action} (${(s.action_confidence * 100).toFixed(0)}%)`;
+  $("targetPart").textContent = s.target_part ? (PART_LABEL[s.target_part] || s.target_part) : "—";
+
+  const limit = s.timeout_ms || 0;
+  $("elapsed").textContent = (s.elapsed_ms / 1000).toFixed(1);
+  $("limit").textContent = limit ? (limit / 1000).toFixed(1) : "—";
+  const ratio = limit ? s.elapsed_ms / limit : 0;
+  $("timerFill").style.width = Math.min(100, ratio * 100) + "%";
+  $("timer").dataset.over = ratio > 1 ? "1" : "0";
+
+  totalSteps = s.steps.length;
+  $("steps").innerHTML = s.steps.map(
+    (st) => `<li data-s="${st.status}" title="${st.action} → ${st.target_part}">${st.name}</li>`
+  ).join("");
+
+  $("parts").innerHTML = Object.entries(s.parts_status).map(
+    ([part, status]) => `<div data-p="${status}"><span class="chip"></span>${PART_LABEL[part] || part}
+      <span class="tag">${STATUS_LABEL[status] || status}</span></div>`
+  ).join("");
+
+  $("alarms").innerHTML = s.anomalies.map(
+    (a) => `<div><span class="t">${a.type}</span><br>${a.message}</div>`
+  ).join("");
+
+  if (!videoStarted && s.station_id) {
+    $("video").src = `/api/v1/stations/${encodeURIComponent(s.station_id)}/video`;
+    videoStarted = true;
+  }
+}
+
+function renderRecords(rows) {
+  if (!rows.length) return;
+  $("records").innerHTML = rows.map((r) => `
+    <tr data-r="${r.result}">
+      <td class="num">${r.id}</td>
+      <td class="num">${(r.timestamp || "").replace("T", " ").slice(5, 19)}</td>
+      <td class="verdict" data-r="${r.result}">${r.result === "PASS" ? "✓ 合格" : "✗ 异常"}</td>
+      <td>${(r.anomalies || []).map((a) => a.type).join("、") || "—"}</td>
+      <td class="num">${(r.steps_completed || []).length}${totalSteps ? "/" + totalSteps : ""}</td>
+      <td class="num">${(r.duration_ms / 1000).toFixed(1)}s</td>
+    </tr>`).join("");
+}
+
+async function refreshFooter() {
+  try {
+    const [stats, records] = await Promise.all([
+      fetch("/api/v1/stats/overview").then((r) => r.json()),
+      fetch("/api/v1/records?limit=15").then((r) => r.json()),
+    ]);
+    $("total").textContent = stats.total;
+    $("passed").textContent = stats.passed;
+    $("failed").textContent = stats.failed;
+    $("rate").textContent = stats.pass_rate === null ? "—" : (stats.pass_rate * 100).toFixed(1) + "%";
+    renderRecords(records);
+  } catch (e) { /* 界面不因为一次拉取失败而卡住 */ }
+}
+
+function connect() {
+  const socket = new WebSocket(`ws://${location.host}/ws/live`);
+
+  socket.onmessage = (message) => {
+    const data = JSON.parse(message.data);
+    if (data.type === "station_update") renderSnapshot(data);
+    else if (data.type === "assembly_complete") refreshFooter();
+    else if (data.type === "error") {
+      $("lamp").dataset.on = "error";
+      $("status").textContent = data.message;
+    }
+  };
+
+  socket.onclose = () => {
+    $("lamp").dataset.on = "error";
+    $("status").textContent = "连接断开，重连中";
+    setTimeout(connect, 2000);
+  };
+}
+
+connect();
+refreshFooter();
+setInterval(refreshFooter, 5000);
+</script>
+</body>
+</html>

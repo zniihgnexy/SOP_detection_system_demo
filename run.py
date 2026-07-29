@@ -154,14 +154,10 @@ def cmd_replay(args: argparse.Namespace) -> int:
 
 
 def _print_event(event: dict, timestamp_ms: int) -> None:
-    kind = event["type"]
-    if kind == "step_completed":
-        print(f"    ✓ {_s(timestamp_ms):>6}  {event['step_id']} {event['step_name']:<6}"
-              f"  耗时 {event['duration_ms']:>5}ms  置信度 {event['confidence']}")
-    elif kind == "anomaly_detected":
-        print(f"    ✗ {_s(timestamp_ms):>6}  {event['anomaly_type']:<13} {event['message']}")
-    elif kind == "assembly_complete":
-        pass          # 汇总行统一打印
+    """assembly_complete 不在这里打印，由每个序列的汇总行统一输出。"""
+    line = fsm.format_event(event, timestamp_ms)
+    if line:
+        print(line)
 
 
 # ------------------------------------------------------------- 模式：自检
